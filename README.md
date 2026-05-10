@@ -66,7 +66,7 @@ Returns `{"status": "ok"}`.
 
 | Variable | Description |
 |---|---|
-| `GROQ_API_KEY` | Groq API key (get one free at [console.groq.com](https://console.groq.com/)) |
+| `GEMINI_API_KEY` | Google Gemini API key (get one free at [console.cloud.google.com](https://console.cloud.google.com/)) |
 
 ## Evaluation
 
