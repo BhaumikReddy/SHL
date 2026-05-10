@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -39,3 +40,8 @@ Thumbs.db
 
 # Pytest
 .pytest_cache/
+
+# Data — DO commit catalog.json and faiss_index/ so Render can use them
+# Uncomment the lines below only if you want to exclude them:
+# data/faiss_index/
+# data/catalog.json
