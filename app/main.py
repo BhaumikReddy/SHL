@@ -3,12 +3,13 @@ app/main.py
 
 FastAPI application with:
   GET  /health  → {"status": "ok"}
-  POST /chat    → ChatResponse (stub for now, wired in Stage 4)
+  POST /chat    → ChatResponse (powered by Gemini + FAISS)
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agent import get_agent_reply
 from app.models import ChatRequest, ChatResponse, Recommendation
 
 app = FastAPI(
@@ -32,9 +33,12 @@ def health():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    # Stub — will be replaced with real agent logic in Stage 4
+    messages = [{"role": m.role, "content": m.content} for m in request.messages]
+    result = get_agent_reply(messages)
     return ChatResponse(
-        reply="stub",
-        recommendations=[],
-        end_of_conversation=False,
+        reply=result["reply"],
+        recommendations=[
+            Recommendation(**r) for r in result["recommendations"]
+        ],
+        end_of_conversation=result["end_of_conversation"],
     )
