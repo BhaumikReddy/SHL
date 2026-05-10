@@ -26,13 +26,13 @@ with open(_ITEMS_PATH, encoding="utf-8") as f:
 print(f"Retriever ready — {_index.ntotal} items indexed.")
 
 
-def search(query: str, top_k: int = 10) -> list[dict]:
+def search(query: str, top_k: int = 20) -> list[dict]:
     """
     Return the top_k most relevant catalog items for the given query.
 
     Args:
         query:  Natural-language search string.
-        top_k:  Number of results to return (default 10, max capped at index size).
+        top_k:  Number of results to return (default 20, max capped at index size).
 
     Returns:
         List of catalog item dicts, ordered by relevance (most relevant first).

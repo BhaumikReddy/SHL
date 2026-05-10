@@ -23,9 +23,15 @@ MODEL_NAME = "all-MiniLM-L6-v2"
 
 
 def build_text(item: dict) -> str:
-    """Combine name, test_type, and description into a single string for embedding."""
-    parts = [item.get("name", ""), item.get("test_type", ""), item.get("description", "")]
-    return " | ".join(p for p in parts if p)
+    """Combine all rich fields into a single string for embedding."""
+    parts = [
+        item.get("name", ""),
+        item.get("description", ""),
+        " ".join(item.get("keys", [])),
+        " ".join(item.get("job_levels", [])),
+        item.get("duration", ""),
+    ]
+    return " ".join(filter(None, parts)).strip()
 
 
 def main():

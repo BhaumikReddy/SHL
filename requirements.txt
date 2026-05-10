@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-groq
+google-generativeai
 sentence-transformers
 faiss-cpu
 beautifulsoup4

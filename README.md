@@ -5,8 +5,8 @@ A conversational API that helps hiring managers find the right SHL assessments f
 ## What it does
 
 - Takes a conversation history and returns a natural-language reply plus a list of SHL assessment recommendations
-- Uses semantic search (FAISS + sentence-transformers) over the scraped SHL catalog to surface relevant assessments
-- Powered by Groq (`llama-3.3-70b-versatile`) for lightning-fast, highly accurate reasoning and structured JSON output
+- Uses semantic search (FAISS + sentence-transformers) over the SHL catalog to surface relevant assessments
+- Powered by Google Gemini (`gemini-2.0-flash`) for fast, structured JSON output
 - Stateless REST API — no session storage; full conversation history is sent with every request
 
 ## Quickstart (local)
@@ -20,17 +20,14 @@ python -m venv .venv
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set your Groq API key
+# 3. Set your Gemini API key
 cp .env.example .env
-# Edit .env and add your GROQ_API_KEY
+# Edit .env and add your GEMINI_API_KEY
 
-# 4. (Already done) Scrape the SHL catalog
-python scripts/scrape.py
-
-# 5. Build the FAISS vector index
+# 4. Build the FAISS vector index
 python scripts/build_index.py
 
-# 6. Run the API
+# 5. Run the API
 uvicorn app.main:app --reload
 ```
 
@@ -71,10 +68,23 @@ Returns `{"status": "ok"}`.
 |---|---|
 | `GROQ_API_KEY` | Groq API key (get one free at [console.groq.com](https://console.groq.com/)) |
 
+## Evaluation
+
+Run the trace evaluation script to check Recall@10 against the sample conversations:
+
+```bash
+# Start the server first
+uvicorn app.main:app --reload
+
+# Then in another terminal
+python scripts/test_traces.py
+```
+
 ## Project structure
 
 ```
 app/          FastAPI app, agent logic, retriever, models
-scripts/      Scraper and index builder
-data/         Scraped catalog (catalog.json) and FAISS index
+scripts/      Index builder and trace evaluator
+data/         SHL catalog (catalog.json) and FAISS index
+GenAI_SampleConversations/  Reference conversation traces
 ```
