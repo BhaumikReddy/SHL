@@ -1,55 +1,58 @@
 """
 app/retriever.py
 
-Loads the FAISS index and catalog items once at import time.
+Loads the TF-IDF index and catalog items using scikit-learn.
 Exposes a single search() function for semantic retrieval.
 """
 
-import json
 import os
-
-import faiss
+import joblib
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 _BASE = os.path.join(os.path.dirname(__file__), "..", "data", "faiss_index")
-_INDEX_PATH = os.path.join(_BASE, "index.faiss")
-_ITEMS_PATH = os.path.join(_BASE, "catalog_items.json")
-_MODEL_NAME = "all-MiniLM-L6-v2"
 
-# Load once at module import
-print("Loading FAISS index and embedding model...")
-_model = SentenceTransformer(_MODEL_NAME)
-_index = faiss.read_index(_INDEX_PATH)
-with open(_ITEMS_PATH, encoding="utf-8") as f:
-    _items: list[dict] = json.load(f)
-print(f"Retriever ready — {_index.ntotal} items indexed.")
+_vectorizer = None
+_catalog = None
+_texts = None
+
+
+def _load():
+    """Load TF-IDF components lazily."""
+    global _vectorizer, _catalog, _texts
+    if _vectorizer is None:
+        print("Loading TF-IDF vectorizer and catalog...")
+        _vectorizer = joblib.load(os.path.join(_BASE, "vectorizer.joblib"))
+        _catalog = joblib.load(os.path.join(_BASE, "catalog_items.joblib"))
+        _texts = joblib.load(os.path.join(_BASE, "texts.joblib"))
+        print(f"Retriever ready — {len(_catalog)} items indexed.")
+
+
+_load()
 
 
 def search(query: str, top_k: int = 20) -> list[dict]:
     """
-    Return the top_k most relevant catalog items for the given query.
+    Return the top_k most relevant catalog items for the given query using TF-IDF.
 
     Args:
         query:  Natural-language search string.
-        top_k:  Number of results to return (default 20, max capped at index size).
+        top_k:  Number of results to return (default 20, max capped at catalog size).
 
     Returns:
         List of catalog item dicts, ordered by relevance (most relevant first).
     """
-    top_k = min(top_k, _index.ntotal)
+    _load()
+    top_k = min(top_k, len(_catalog))
 
-    # Encode and normalize the query vector
-    embedding = _model.encode([query], convert_to_numpy=True)
-    faiss.normalize_L2(embedding)
+    # Transform query to TF-IDF vector
+    query_vec = _vectorizer.transform([query])
 
-    # Search
-    scores, indices = _index.search(embedding, top_k)
+    # Transform corpus to TF-IDF vectors and compute similarity
+    corpus_vec = _vectorizer.transform(_texts)
+    scores = cosine_similarity(query_vec, corpus_vec)[0]
 
-    results = []
-    for idx in indices[0]:
-        if idx < 0:  # FAISS returns -1 for empty slots
-            continue
-        results.append(_items[idx])
+    # Get top-k indices
+    top_indices = np.argsort(scores)[::-1][:top_k]
 
-    return results
+    return [_catalog[i] for i in top_indices]
