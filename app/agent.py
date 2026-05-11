@@ -20,21 +20,23 @@ load_dotenv()
 _client = None
 
 
-def _get_client():
+def _get_client() -> genai.Client:
     global _client
     if _client is None:
         key = os.environ.get("GEMINI_API_KEY")
         if not key:
-            raise ValueError("GEMINI_API_KEY environment variable is missing. Please set it in your .env file.")
+            raise ValueError(
+                "GEMINI_API_KEY environment variable is missing. "
+                "Please set it in your .env file."
+            )
         _client = genai.Client(api_key=key)
     return _client
 
 
 _MODEL = "gemini-2.0-flash"
 
-MAX_TURNS = 8  # hard cap on conversation length
+MAX_TURNS = 8
 
-# Mapping from full key name to single-letter test type code
 KEYS_TO_TYPE = {
     "Ability & Aptitude": "A",
     "Assessment Exercises": "E",
@@ -48,7 +50,6 @@ KEYS_TO_TYPE = {
 
 
 def get_test_type(item: dict) -> str:
-    """Return comma-joined single-letter codes for all keys of an item."""
     codes = [KEYS_TO_TYPE.get(k, "") for k in item.get("keys", []) if k in KEYS_TO_TYPE]
     return ",".join(filter(None, codes))
 
@@ -67,8 +68,8 @@ Rules:
     * duration — mention timing when the user asks about it
     * languages — filter if the user specifies language requirements
     * remote — mention if the user asks about remote-friendly testing
-    * adaptive — mention if relevant (adaptive tests adjust to candidate ability)
-    * keys — use for test category matching (e.g. Personality & Behavior, Ability & Aptitude, Knowledge & Skills)
+    * adaptive — mention if relevant
+    * keys — use for test category matching (e.g. Personality & Behavior, Ability & Aptitude)
 - If the user asks to compare assessments, compare only using the catalog data given.
 - Refuse off-topic questions (legal advice, general HR, anything unrelated to SHL assessments).
 - Do not recommend on the very first turn if the query is vague.
@@ -84,9 +85,9 @@ When recommending:
 When the user is satisfied:
 {"reply": "...", "recommendations": [...], "end_of_conversation": true}
 
-Important notes on fields:
-- "url" in recommendations must be copied exactly from the URL field of the matching catalog entry.
-- "test_type" must be the single-letter code(s) for that assessment (e.g. "K", "A", "P", "K,A").
+Important:
+- "url" must be copied exactly from the catalog entry.
+- "test_type" must be the single-letter code(s) (e.g. "K", "A,S", "P").
 - Always return valid JSON. Never return plain text outside of JSON.
 """
 
@@ -94,13 +95,11 @@ FALLBACK = {"reply": "", "recommendations": [], "end_of_conversation": False}
 
 
 def _build_query(messages: list[dict]) -> str:
-    """Extract a search query from the conversation — combine recent user turns."""
     user_texts = [m["content"] for m in messages if m["role"] == "user"]
     return " ".join(user_texts[-3:])
 
 
 def _format_catalog_context(items: list[dict]) -> str:
-    """Format retrieved catalog items as a structured context block for the LLM."""
     lines = []
     for item in items:
         keys = ", ".join(item.get("keys", []))
@@ -126,12 +125,21 @@ def _format_catalog_context(items: list[dict]) -> str:
     return "\n\n".join(lines)
 
 
+def _build_prompt(messages: list[dict], system_with_catalog: str) -> str:
+    """
+    Build a single prompt string combining system instructions,
+    catalog context, and full conversation history.
+    """
+    prompt = system_with_catalog + "\n\n"
+    prompt += "CONVERSATION HISTORY:\n"
+    for m in messages:
+        role = "User" if m["role"] == "user" else "Assistant"
+        prompt += f"{role}: {m['content']}\n"
+    prompt += "\nAssistant:"
+    return prompt
+
+
 def _parse_response(text: str) -> dict:
-    """
-    Extract a JSON object from the LLM response text.
-    Handles markdown code fences and stray surrounding text.
-    Returns a valid response dict, or a fallback on parse failure.
-    """
     text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
 
     match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -161,15 +169,8 @@ def _parse_response(text: str) -> dict:
 
 def get_agent_reply(messages: list[dict]) -> dict:
     """
-    Main agent entry point using Groq.
-
-    Args:
-        messages: Full conversation history as list of {"role": str, "content": str}.
-
-    Returns:
-        Dict matching the ChatResponse schema.
+    Main agent entry point using Gemini via google-genai SDK.
     """
-    # Enforce max-turn limit
     user_turns = sum(1 for m in messages if m["role"] == "user")
     if user_turns > MAX_TURNS:
         return {
@@ -178,38 +179,28 @@ def get_agent_reply(messages: list[dict]) -> dict:
             "end_of_conversation": True,
         }
 
-    # Retrieve relevant catalog items based on conversation
     query = _build_query(messages)
     catalog_items = retriever.search(query, top_k=20)
 
-    # Build system prompt with rich catalog context
     catalog_context = _format_catalog_context(catalog_items)
-    system_instruction = (
+    system_with_catalog = (
         SYSTEM_PROMPT
         + f"\n\nAVAILABLE ASSESSMENTS (use only these):\n\n{catalog_context}"
     )
 
-    # Format history for Gemini (expects "user" or "assistant")
-    formatted_msgs = [{"role": "user", "content": system_instruction}]
-    for m in messages:
-        role = "user" if m["role"] == "user" else "model"
-        formatted_msgs.append({"role": role, "content": m["content"]})
+    prompt = _build_prompt(messages, system_with_catalog)
 
     try:
         client = _get_client()
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=formatted_msgs,
-            config=genai.types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=1024
-            )
+            model=_MODEL,
+            contents=prompt,
         )
         raw_text = response.text
     except Exception as e:
         return {
             **FALLBACK,
-            "reply": f"Sorry, I encountered an error with the Gemini engine: {str(e)}. Please try again.",
+            "reply": f"Sorry, I encountered an error: {str(e)}. Please try again.",
         }
 
     return _parse_response(raw_text)
