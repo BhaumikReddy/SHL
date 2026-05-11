@@ -6,4 +6,3 @@ python-dotenv
 pydantic
 scikit-learn
 joblib
-faiss-cpu

@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-if not os.getenv("GEMINI_API_KEY"):
-    raise RuntimeError("GEMINI_API_KEY environment variable not set")
+if not os.getenv("GROQ_API_KEY"):
+    raise RuntimeError("GROQ_API_KEY environment variable not set")
 
 from app.agent import get_agent_reply
 from app.models import ChatRequest, ChatResponse, Recommendation
