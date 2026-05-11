@@ -11,7 +11,7 @@ import os
 import re
 
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 
 from . import retriever
 
@@ -26,8 +26,7 @@ def _get_client():
         key = os.environ.get("GEMINI_API_KEY")
         if not key:
             raise ValueError("GEMINI_API_KEY environment variable is missing. Please set it in your .env file.")
-        genai.configure(api_key=key)
-        _client = genai.GenerativeModel("gemini-2.0-flash")
+        _client = genai.Client(api_key=key)
     return _client
 
 
@@ -198,9 +197,10 @@ def get_agent_reply(messages: list[dict]) -> dict:
 
     try:
         client = _get_client()
-        response = client.generate_content(
-            formatted_msgs,
-            generation_config=genai.types.GenerationConfig(
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=formatted_msgs,
+            config=genai.types.GenerateContentConfig(
                 temperature=0.2,
                 max_output_tokens=1024
             )
