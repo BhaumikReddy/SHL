@@ -1,9 +1,11 @@
 services:
   - type: web
     name: shl-recommender
-    env: python
+    runtime: python
     buildCommand: "pip install -r requirements.txt && python scripts/build_index.py"
-    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
+      - key: PYTHON_VERSION
+        value: 3.10.0

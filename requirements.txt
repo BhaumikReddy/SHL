@@ -1,8 +1,9 @@
 fastapi
 uvicorn
-google-genai
+groq
 requests
 python-dotenv
 pydantic
 scikit-learn
 joblib
+faiss-cpu
