@@ -1,3 +1,11 @@
+"""
+app/agent.py
+
+Agent logic: builds a query from conversation history, retrieves relevant
+catalog items via TF-IDF semantic search, calls Groq's llama-3.3-70b-versatile,
+and parses the JSON response.
+"""
+
 import json
 import os
 import re

@@ -6,7 +6,7 @@ A conversational API that helps hiring managers find the right SHL assessments f
 
 - Takes a conversation history and returns a natural-language reply plus a list of SHL assessment recommendations
 - Uses semantic search (FAISS + sentence-transformers) over the SHL catalog to surface relevant assessments
-- Powered by Google Gemini (`gemini-2.0-flash`) for fast, structured JSON output
+- Powered by Groq's `llama-3.3-70b-versatile` model for fast, structured JSON output
 - Stateless REST API — no session storage; full conversation history is sent with every request
 
 ## Quickstart (local)
@@ -20,9 +20,9 @@ python -m venv .venv
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set your Gemini API key
+# 3. Set your Groq API key
 cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
+# Edit .env and add your GROQ_API_KEY
 
 # 4. Build the FAISS vector index
 python scripts/build_index.py
@@ -66,7 +66,7 @@ Returns `{"status": "ok"}`.
 
 | Variable | Description |
 |---|---|
-| `GEMINI_API_KEY` | Google Gemini API key (get one free at [console.cloud.google.com](https://console.cloud.google.com/)) |
+| `GROQ_API_KEY` | Groq API key (get one free at [console.groq.com](https://console.groq.com/)) |
 
 ## Evaluation
 

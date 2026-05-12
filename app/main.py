@@ -3,7 +3,7 @@ app/main.py
 
 FastAPI application with:
   GET  /health  → {"status": "ok"}
-  POST /chat    → ChatResponse (powered by Gemini + FAISS)
+  POST /chat    → ChatResponse (powered by Groq's llama-3.3-70b-versatile + TF-IDF retrieval)
 """
 
 from fastapi import FastAPI, HTTPException
